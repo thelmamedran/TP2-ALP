@@ -59,11 +59,16 @@ quote :: Value -> Term
 quote (VLam t f) = Lam t f
 
 -- evalúa un término en un entorno dado
-eval :: NameEnv Value Type -> Term -> Value
-eval = undefined
-
-
-
+eval :: NameEnv Value Type -> Term -> Value 
+eval nvs (Lam t body) = VLam t body
+eval nvs (t1 :@: t2)  = case eval nvs t1 of
+                          VLam t body -> let v2    = eval nvs t2
+                                             body' = sub 0 (quote v2) body
+                                         in eval nvs body'
+                          _           -> error "Se intentó aplicar un término que no es una función."
+eval nvs (Free n)     = case lookup n nvs of 
+                          Just (v, _) -> v
+                          Nothing     -> error "Variable global no definida."
 
 ----------------------
 --- type checker
