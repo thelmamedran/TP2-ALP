@@ -33,13 +33,15 @@ conversion_aux :: [String] -> LamTerm -> Term
 conversion_aux l (LVar x) = let (bool, i) = indice l x
                               in if bool then (Bound i) else (Free (Global x))
 conversion_aux l (LAbs x t term) = (Lam t (conversion_aux (x:l) term))
-conversion_aux l (LApp term1 term2) = ((conversion_aux l term1) :@: (conversion_aux l term2))
-conversion_aux l (LLet x term1 term2) =
+conversion_aux l (LApp t1 t2) = ((conversion_aux l t1) :@: (conversion_aux l t2))
+-- a chequear::::::::
+conversion_aux l (LLet x t1 t2) = (Let (conversion_aux l t1) (conversion (x:l) t2))
 conversion_aux l LZero = Zero
 conversion_aux l (LSuc t) = (Suc conversion_aux l t)
 conversion_aux l (LRec t1 t2 t3) = (Rec (conversion_aux l t1) (conversion_aux l t2) (conversion_aux l t3))
 conversion_aux l LNil = Nil
 conversion_aux l (LCons t1 t2) = (Cons (conversion_aux l t1) (conversion_aux l t2))
+
 ----------------------------
 --- evaluador de términos
 ----------------------------
