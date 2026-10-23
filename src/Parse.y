@@ -22,6 +22,8 @@ import Data.Char
     '('     { TOpen }
     ')'     { TClose }
     '->'    { TArrow }
+    'let'   { TLet }
+    'in'    { TIn }
     VAR     { TVar $$ }
     TYPEE   { TTypeE }
     DEF     { TDef }
@@ -29,7 +31,7 @@ import Data.Char
 
 %left '=' 
 %right '->'
-%right '\\' '.' 
+%right '\\' '.' 'let' 'in'
 
 %%
 
@@ -39,6 +41,7 @@ Defexp  : DEF VAR '=' Exp              { Def $2 $4 }
 
 Exp     :: { LamTerm }
         : '\\' VAR ':' Type '.' Exp    { LAbs $2 $4 $6 }
+        | 'let' VAR '=' Exp 'in' Exp   { LLet $2 $4 $6 }
         | NAbs                         { $1 }
         
 NAbs    :: { LamTerm }
@@ -55,7 +58,7 @@ Type    : TYPEE                        { EmptyT }
 
 Defs    : Defexp Defs                  { $1 : $2 }
         |                              { [] }
-     
+
 {
 
 data ParseResult a = Ok a | Failed String
@@ -96,6 +99,8 @@ data Token = TVar String
                | TArrow
                | TEquals
                | TEOF
+               | TLet
+               | TIn
                deriving Show
 
 ----------------------------------
@@ -112,7 +117,6 @@ lexer cont s = case s of
                     ('\\':cs)-> cont TAbs cs
                     ('.':cs) -> cont TDot cs
                     ('(':cs) -> cont TOpen cs
-                    ('-':('>':cs)) -> cont TArrow cs
                     (')':cs) -> cont TClose cs
                     (':':cs) -> cont TColon cs
                     ('=':cs) -> cont TEquals cs
@@ -121,6 +125,8 @@ lexer cont s = case s of
                     where lexVar cs = case span isAlpha cs of
                               ("E",rest)    -> cont TTypeE rest
                               ("def",rest)  -> cont TDef rest
+                              ("let",rest)  -> cont TLet rest
+                              ("in",rest)   -> cont TIn rest
                               (var,rest)    -> cont (TVar var) rest
                           consumirBK anidado cl cont s = case s of
                               ('-':('-':cs)) -> consumirBK anidado cl cont $ dropWhile ((/=) '\n') cs
