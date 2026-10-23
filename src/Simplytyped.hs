@@ -22,8 +22,24 @@ import           Common
 
 -- conversion a términos localmente sin nombres
 conversion :: LamTerm -> Term
-conversion = undefined
+conversion = conversion_aux []
 
+indice :: Eq a => [a] -> a -> (Bool, Int)
+indice = indice_aux 0
+      where indice_aux i [] x = (False, -1)
+            indice_aux i (x:xs) y = if (x == y) then (True, i) else indice_aux (i+1) xs y
+
+conversion_aux :: [String] -> LamTerm -> Term
+conversion_aux l (LVar x) = let (bool, i) = indice l x
+                              in if bool then (Bound i) else (Free (Global x))
+conversion_aux l (LAbs x t term) = (Lam t (conversion_aux (x:l) term))
+conversion_aux l (LApp term1 term2) = ((conversion_aux l term1) :@: (conversion_aux l term2))
+conversion_aux l (LLet x term1 term2) =
+conversion_aux l LZero = Zero
+conversion_aux l (LSuc t) = (Suc conversion_aux l t)
+conversion_aux l (LRec t1 t2 t3) = (Rec (conversion_aux l t1) (conversion_aux l t2) (conversion_aux l t3))
+conversion_aux l LNil = Nil
+conversion_aux l (LCons t1 t2) = (Cons (conversion_aux l t1) (conversion_aux l t2))
 ----------------------------
 --- evaluador de términos
 ----------------------------
