@@ -27,8 +27,8 @@ pp ii vs (Bound k         ) = text (vs !! (ii - k - 1))
 pp _  _  (Free  (Global s)) = text s
 
 pp ii vs (i :@: c         ) = sep
-  [ parensIf (isLam i) (pp ii vs i)
-  , nest 1 (parensIf (isLam c || isApp c || isLet c) (pp ii vs c))
+  [ parensIf (isLam i || isLet c || isCons c || isRL c) (pp ii vs i)
+  , nest 1 (parensIf (isLam c || isApp c || isLet c || isCons c || isRL c) (pp ii vs c))
   ]
 pp ii vs (Lam t c) =
   text "\\"
@@ -44,6 +44,18 @@ pp ii vs (Let t1 t2) =
     <> pp ii vs t1
     <> text " in "
     <> pp (ii + 1) vs t2
+pp _ _ (Nil) = text "nil"
+pp ii vs (Cons h t) = sep
+  [ text "cons"
+  , nest 1 (parensIf (isLam h || isApp h || isCons h || isRL h) (pp ii vs h))
+  , nest 1 (parensIf (isLam t || isRL t) (pp ii vs t))
+  ]
+pp ii vs (RL a b c) = sep
+  [ text "RL"
+  , nest 1 (parensIf (isLam a || isApp a || isCons a || isRL a) (pp ii vs a))
+  , nest 1 (parensIf (isLam b || isApp b || isCons b || isRL b) (pp ii vs b))
+  , nest 1 (parensIf (isLam c) (pp ii vs c))
+  ]
 
 isLam :: Term -> Bool
 isLam (Lam _ _) = True
@@ -56,6 +68,14 @@ isApp _         = False
 isLet :: Term -> Bool
 isLet (Let _ _) = True
 isLet _         = False
+
+isCons :: Term -> Bool
+isCons (Cons _ _) = True
+isCons _          = False
+
+isRL :: Term -> Bool
+isRL (RL _ _ _) = True
+isRL _          = False
 
 -- pretty-printer de tipos
 printType :: Type -> Doc
@@ -74,6 +94,10 @@ fv (Free  (Global n)) = [n]
 fv (t   :@: u       ) = fv t ++ fv u
 fv (Lam _   u       ) = fv u
 fv (Let t1 t2       ) = fv t1 ++ fv t2
+fv Nil = []
+fv (Cons h t) = fv h ++ fv t
+fv (RecL a b c) = fv a ++ fv b ++ fv c
+
 ---
 printTerm :: Term -> Doc
 printTerm t = pp 0 (filter (\v -> not $ elem v (fv t)) vars) t

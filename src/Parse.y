@@ -24,6 +24,9 @@ import Data.Char
     '->'    { TArrow }
     'let'   { TLet }
     'in'    { TIn }
+    'cons'  { TCons }
+    'nil'   { TNil }
+    'RL'    { TRL }
     VAR     { TVar $$ }
     TYPEE   { TTypeE }
     DEF     { TDef }
@@ -31,7 +34,12 @@ import Data.Char
 
 %left '=' 
 %right '->'
+-- suc tiene mas precedencia que cons asi q creo q va ahi
+%right 'cons'
+%right 'RL'
+-- creo q aca tendria que ir R ya que RL tiene mayor precedencia que R
 %right '\\' '.' 'let' 'in'
+
 
 %%
 
@@ -42,14 +50,27 @@ Defexp  : DEF VAR '=' Exp              { Def $2 $4 }
 Exp     :: { LamTerm }
         : '\\' VAR ':' Type '.' Exp    { LAbs $2 $4 $6 }
         | 'let' VAR '=' Exp 'in' Exp   { LLet $2 $4 $6 }
-        | NAbs                         { $1 }
-        
+        | RNat                         { $1 }
+
+-- aca iria R ?? asumo q tiene nombre RNat
+
+RList   :: { LamTerm }
+        : 'RL' List List List          { LRecL $2 $3 $4 }        -- PEND chequear si poner atom o list
+        | List                         { $1 }
+
+List    :: { LamTerm }
+        : 'cons' Nat Nat               { LCons $2 $3 }                -- PEND chequear si poner atom
+        | Nat                          { $1 }
+
+-- aca iria suc?? asumo q tiene nombre Nat
+
 NAbs    :: { LamTerm }
         : NAbs Atom                    { LApp $1 $2 }
         | Atom                         { $1 }
 
 Atom    :: { LamTerm }
         : VAR                          { LVar $1 }  
+        | 'nil'                        { LNil }
         | '(' Exp ')'                  { $2 }
 
 Type    : TYPEE                        { EmptyT }
@@ -101,6 +122,9 @@ data Token = TVar String
                | TEOF
                | TLet
                | TIn
+               | TCons
+               | TNil
+               | TRL
                deriving Show
 
 ----------------------------------
@@ -127,6 +151,9 @@ lexer cont s = case s of
                               ("def",rest)  -> cont TDef rest
                               ("let",rest)  -> cont TLet rest
                               ("in",rest)   -> cont TIn rest
+                              ("cons",rest) -> cont TCons rest
+                              ("nil",rest) -> cont TNil rest
+                              ("RL",rest) -> cont TRecL rest
                               (var,rest)    -> cont (TVar var) rest
                           consumirBK anidado cl cont s = case s of
                               ('-':('-':cs)) -> consumirBK anidado cl cont $ dropWhile ((/=) '\n') cs

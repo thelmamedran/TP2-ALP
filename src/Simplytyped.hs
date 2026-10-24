@@ -57,6 +57,8 @@ sub i t (Lam t'  u)           = Lam t' (sub (i + 1) t u)
 -- convierte un valor en el término equivalente
 quote :: Value -> Term
 quote (VLam t f) = Lam t f
+quote (VList VNil)         = Nil
+quote (VList (VCons n l))  = Cons (quote (VNum n)) (quote (VList l))
 
 -- evalúa un término en un entorno dado
 eval :: NameEnv Value Type -> Term -> Value 
@@ -69,6 +71,20 @@ eval nvs (t1 :@: t2)  = case eval nvs t1 of
 eval nvs (Free n)     = case lookup n nvs of 
                           Just (v, _) -> v
                           Nothing     -> error "Variable global no definida."
+eval nvs (Let t1 t2) = let t1' = eval nvs t1 in
+                          eval nvs (sub 0 (quote t1') t2)
+eval nvs Nil = VList VNil
+eval nvs (Cons h t) = case eval nvs h of
+                        VNum x -> case eval nvs t of
+                                  VList xs -> VList (VCons x xs)
+                                  _ -> error "Lista mal definida."
+                        _ -> error "Un elemento de la lista no es un natural."
+eval nvs (RecL t1 t2 l) = case eval nvs l of
+                            VList xs -> case xs of
+                                            VNil -> eval nvs t1
+                                            VCons x xs -> eval nvs ((t2 :@: (quote (VNum x))) :@: (RecL t1 t2 (quote (VList xs))))
+                            _ -> error "Se intentó aplicar RL en un término que no es una lista."
+                            
 
 ----------------------
 --- type checker
@@ -116,5 +132,23 @@ infer' c e (t :@: u) = infer' c e t >>= \tt -> infer' c e u >>= \tu ->
     FunT t1 t2 -> if (tu == t1) then ret t2 else matchError t1 tu
     _          -> notfunError tt
 infer' c e (Lam t u) = infer' (t : c) e u >>= \tu -> ret $ FunT t tu
--- FALTA EL LET!!!
-
+infer' c e (Let t1 t2) = infer' c e t1 >>= \tt -> infer' (tt : c) e t2
+infer' c e Nil = ret ListT
+infer' c e (Cons x xs) = infer' c e x >>= \tx -> infer' c e xs >>= \txs -> 
+    case tx of
+      NatT -> case txs of
+              ListT -> ret ListT
+              _ -> matchError ListT txs
+      _ -> matchError NatT tx
+infer' c e (RecL t1 t2 t3) = 
+      infer' c e t1 >>= \tt1 -> 
+      infer' c e t2 >>= \tt2 -> 
+      infer' c e t3 >>= \tt3 ->
+    case tt2 of 
+      FunT NatT t2' -> case t2' of 
+                          FunT t2'' t3' -> if (t2'' == tt1 && t3' == tt1) then case tt3 of
+                                                                                ListT -> ret tt1
+                                                                                _ -> matchError ListT tt3
+                                                    else matchError (FunT NatT (FunT tt1 tt1)) tt2
+                          _ -> matchError (FunT NatT (FunT tt1 tt1)) tt2
+      _ -> matchError (FunT NatT (FunT tt1 tt1)) tt2
