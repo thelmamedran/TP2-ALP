@@ -83,7 +83,7 @@ eval nvs (Free n)     = case lookup n nvs of
 eval nvs (Let t1 t2) = let t1' = eval nvs t1 in
                           eval nvs (sub 0 (quote t1') t2)
 
-eval _ zero      = VNum NZero
+eval _ Zero      = VNum NZero
 eval nvs (Suc t) = case eval nvs t of
                      VNum nv -> VNum (NSuc nv)
                      _ -> error "Se esperaba un número en Suc."
@@ -159,7 +159,7 @@ infer' _ _ Zero    = ret NatT
 infer' c e (Suc t) = 
   infer' c e t >>= \tt -> 
     if   tt == NatT
-    then ret Nat
+    then ret NatT
     else matchError NatT tt
 
 infer' c e (Rec t1 t2 t3) = 
