@@ -24,22 +24,24 @@ import Data.Char
     '->'    { TArrow }
     'let'   { TLet }
     'in'    { TIn }
+    '0'     { TZero }
+    'suc'   { TSuc }
+    'R'     { TRec }
     'cons'  { TCons }
     'nil'   { TNil }
     'RL'    { TRL }
     VAR     { TVar $$ }
     TYPEE   { TTypeE }
+    TYPENAT { TTypeNat }
     DEF     { TDef }
     
 
 %left '=' 
 %right '->'
--- suc tiene mas precedencia que cons asi q creo q va ahi
 %right 'cons'
 %right 'RL'
--- creo q aca tendria que ir R ya que RL tiene mayor precedencia que R
 %right '\\' '.' 'let' 'in'
-
+-- para suc y R no hay ningun problema de ambiguedad, no hace falta que esten aca
 
 %%
 
@@ -50,30 +52,36 @@ Defexp  : DEF VAR '=' Exp              { Def $2 $4 }
 Exp     :: { LamTerm }
         : '\\' VAR ':' Type '.' Exp    { LAbs $2 $4 $6 }
         | 'let' VAR '=' Exp 'in' Exp   { LLet $2 $4 $6 }
-        | RNat                         { $1 }
+        | RecExp                       { $1 }
 
--- aca iria R ?? asumo q tiene nombre RNat
+RecExp  :: { LamTerm }
+        : 'R' Atom Atom Atom           { LRec $2 $3 $4 }
+        | RList                        { $1 }
 
 RList   :: { LamTerm }
         : 'RL' List List List          { LRecL $2 $3 $4 }        -- PEND chequear si poner atom o list
-        | List                         { $1 }
+        | List    
 
 List    :: { LamTerm }
         : 'cons' Nat Nat               { LCons $2 $3 }                -- PEND chequear si poner atom
-        | Nat                          { $1 }
+        | SucExp   
 
--- aca iria suc?? asumo q tiene nombre Nat
+SucExp  :: { LamTerm }
+        : 'suc' SucExp                 { LSuc $2 }
+        | NAbs
 
 NAbs    :: { LamTerm }
         : NAbs Atom                    { LApp $1 $2 }
         | Atom                         { $1 }
 
 Atom    :: { LamTerm }
-        : VAR                          { LVar $1 }  
+        : VAR                          { LVar $1 }
+        | '0'                          { LZero }  
         | 'nil'                        { LNil }
         | '(' Exp ')'                  { $2 }
 
 Type    : TYPEE                        { EmptyT }
+        | TYPENAT                      { NatT }
         | Type '->' Type               { FunT $1 $3 }
         | '(' Type ')'                 { $2 }
 
@@ -111,6 +119,7 @@ happyError = \ s i -> Failed $ "Línea "++(show (i::LineNumber))++": Error de pa
 
 data Token = TVar String
                | TTypeE
+               | TTypeNat
                | TDef
                | TAbs
                | TDot
@@ -122,6 +131,9 @@ data Token = TVar String
                | TEOF
                | TLet
                | TIn
+               | TZero
+               | TSuc
+-              | TRec
                | TCons
                | TNil
                | TRL
@@ -144,13 +156,17 @@ lexer cont s = case s of
                     (')':cs) -> cont TClose cs
                     (':':cs) -> cont TColon cs
                     ('=':cs) -> cont TEquals cs
+                    ('0':cs) -> cont TZero cs
                     unknown -> \line -> Failed $ 
                      "Línea "++(show line)++": No se puede reconocer "++(show $ take 10 unknown)++ "..."
                     where lexVar cs = case span isAlpha cs of
                               ("E",rest)    -> cont TTypeE rest
+                              ("Nat",rest)  -> cont TTypeNat rest
                               ("def",rest)  -> cont TDef rest
                               ("let",rest)  -> cont TLet rest
                               ("in",rest)   -> cont TIn rest
+                              ("suc",rest)  -> cont TSuc rest
+                              ("R",rest)    -> cont TRec rest
                               ("cons",rest) -> cont TCons rest
                               ("nil",rest) -> cont TNil rest
                               ("RL",rest) -> cont TRecL rest

@@ -36,9 +36,11 @@ conversion_aux l (LAbs x t term) = (Lam t (conversion_aux (x:l) term))
 conversion_aux l (LApp t1 t2) = ((conversion_aux l t1) :@: (conversion_aux l t2))
 -- a chequear::::::::
 conversion_aux l (LLet x t1 t2) = Let (conversion_aux l t1) (conversion_aux (x:l) t2)
-conversion_aux l LZero = Zero
-conversion_aux l (LSuc t) = Suc (conversion_aux l t)
+
+conversion_aux l LZero           = Zero
+conversion_aux l (LSuc t)        = Suc (conversion_aux l t)
 conversion_aux l (LRec t1 t2 t3) = Rec (conversion_aux l t1) (conversion_aux l t2) (conversion_aux l t3)
+
 conversion_aux l LNil = Nil
 conversion_aux l (LCons t1 t2) = Cons (conversion_aux l t1) (conversion_aux l t2)
 
@@ -53,10 +55,16 @@ sub _ _ (Bound j) | otherwise = Bound j
 sub _ _ (Free n   )           = Free n
 sub i t (u   :@: v)           = sub i t u :@: sub i t v
 sub i t (Lam t'  u)           = Lam t' (sub (i + 1) t u)
+sub _ _ Zero           = Zero
+sub i t (Suc u)        = Suc (sub i t u)
+sub i t (Rec t1 t2 t3) = Rec (sub i t t1) (sub i t t2) (sub i t t3)
+
 
 -- convierte un valor en el término equivalente
 quote :: Value -> Term
 quote (VLam t f) = Lam t f
+quote (VNum NZero)    = Zero
+quote (VNum (NSuc n)) = Suc (quote (VNum n))
 quote (VList VNil)         = Nil
 quote (VList (VCons n l))  = Cons (quote (VNum n)) (quote (VList l))
 
@@ -71,8 +79,20 @@ eval nvs (t1 :@: t2)  = case eval nvs t1 of
 eval nvs (Free n)     = case lookup n nvs of 
                           Just (v, _) -> v
                           Nothing     -> error "Variable global no definida."
+                          
 eval nvs (Let t1 t2) = let t1' = eval nvs t1 in
                           eval nvs (sub 0 (quote t1') t2)
+
+eval _ zero      = VNum NZero
+eval nvs (Suc t) = case eval nvs t of
+                     VNum nv -> VNum (NSuc nv)
+                     _ -> error "Se esperaba un número en Suc."
+eval nvs (Rec t1 t2 t3) = case eval nvs t3 of
+                            VNum NZero     -> eval nvs t1
+                            VNum (NSuc nv) -> let t3' = quote (VNum nv)
+                                              in eval nvs ((t2 :@: (Rec t1 t2 t3')) :@:  t3')
+                            _ -> error "Se esperaba un número en el tercer argumento de R."
+
 eval nvs Nil = VList VNil
 eval nvs (Cons h t) = case eval nvs h of
                         VNum x -> case eval nvs t of
@@ -133,6 +153,25 @@ infer' c e (t :@: u) = infer' c e t >>= \tt -> infer' c e u >>= \tu ->
     _          -> notfunError tt
 infer' c e (Lam t u) = infer' (t : c) e u >>= \tu -> ret $ FunT t tu
 infer' c e (Let t1 t2) = infer' c e t1 >>= \tt -> infer' (tt : c) e t2
+
+infer' _ _ Zero    = ret NatT
+
+infer' c e (Suc t) = 
+  infer' c e t >>= \tt -> 
+    if   tt == NatT
+    then ret Nat
+    else matchError NatT tt
+
+infer' c e (Rec t1 t2 t3) = 
+  infer' c e t1 >>= \t1t -> 
+  infer' c e t2 >>= \t2t ->
+  infer' c e t3 >>= \t3t ->
+    if   t3t /= NatT
+    then matchError NatT t3t
+    else if   t2t == FunT t1t (FunT NatT t1t)
+         then ret t1t
+         else matchError (FunT t1t (FunT NatT t1t)) t2t
+
 infer' c e Nil = ret ListT
 infer' c e (Cons x xs) = infer' c e x >>= \tx -> infer' c e xs >>= \txs -> 
     case tx of

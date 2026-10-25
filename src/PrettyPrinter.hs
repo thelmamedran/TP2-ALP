@@ -37,6 +37,7 @@ pp ii vs (Lam t c) =
     <> printType t
     <> text ". "
     <> pp (ii + 1) vs c
+
 pp ii vs (Let t1 t2) =
   text "let "
     <> text (vs !! ii)
@@ -44,6 +45,20 @@ pp ii vs (Let t1 t2) =
     <> pp ii vs t1
     <> text " in "
     <> pp (ii + 1) vs t2
+
+pp _ _ Zero      = text "0"
+
+pp ii vs (Suc t) = 
+  text "suc " 
+    <> parensIf (isLam t || isApp t || isR t) (pp ii vs t)
+
+pp ii vs (Rec t1 t2 t3) = sep 
+  [ text "R"
+  , nest 1 (parensIf (isLam t1 || isApp t1 || isSuc t1 || isR t1) (pp ii vs t1))
+  , nest 1 (parensIf (isLam t2 || isApp t2 || isSuc t2 || isR t2) (pp ii vs t2))
+  , nest 1 (parensIf (isLam t3 || isApp t3 || isSuc t3 || isR t3) (pp ii vs t3))
+  ]
+
 pp _ _ (Nil) = text "nil"
 pp ii vs (Cons h t) = sep
   [ text "cons"
@@ -69,6 +84,14 @@ isLet :: Term -> Bool
 isLet (Let _ _) = True
 isLet _         = False
 
+isSuc :: Term -> Bool
+isSuc (Suc _) = True
+isSuc _       = False
+
+isR :: Term -> Bool
+isR (Rec _ _ _) = True
+isR _           = False
+
 isCons :: Term -> Bool
 isCons (Cons _ _) = True
 isCons _          = False
@@ -80,9 +103,9 @@ isRL _          = False
 -- pretty-printer de tipos
 printType :: Type -> Doc
 printType EmptyT = text "E"
+printType NatT   = text "Nat"
 printType (FunT t1 t2) =
   sep [parensIf (isFun t1) (printType t1), text "->", printType t2]
-
 
 isFun :: Type -> Bool
 isFun (FunT _ _) = True
@@ -94,6 +117,9 @@ fv (Free  (Global n)) = [n]
 fv (t   :@: u       ) = fv t ++ fv u
 fv (Lam _   u       ) = fv u
 fv (Let t1 t2       ) = fv t1 ++ fv t2
+fv Zero           = []
+fv (Suc t)        = fv t
+fv (Rec t1 t2 t3) = fv t1 ++ fv t2 ++ fv t3
 fv Nil = []
 fv (Cons h t) = fv h ++ fv t
 fv (RecL a b c) = fv a ++ fv b ++ fv c
