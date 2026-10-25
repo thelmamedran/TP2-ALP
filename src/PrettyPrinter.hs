@@ -50,8 +50,9 @@ pp _ _ Zero      = text "0"
 
 pp ii vs (Suc t) = 
   text "suc " 
-    <> parensIf (isLam t || isApp t || isR t) (pp ii vs t)
+    <> parensIf (isLam t || isApp t || isR t || isCons t || isLet t) (pp ii vs t)
 
+-- VER: definir isAtom y hacer parensIf (not (isAtom t1))?
 pp ii vs (Rec t1 t2 t3) = sep 
   [ text "R"
   , nest 1 (parensIf (isLam t1 || isApp t1 || isSuc t1 || isR t1) (pp ii vs t1))
@@ -59,18 +60,21 @@ pp ii vs (Rec t1 t2 t3) = sep
   , nest 1 (parensIf (isLam t3 || isApp t3 || isSuc t3 || isR t3) (pp ii vs t3))
   ]
 
+-- VER: si usamos isAtom en el anterior aca supongo que tambien
 pp _ _ (Nil) = text "nil"
 pp ii vs (Cons h t) = sep
   [ text "cons"
   , nest 1 (parensIf (isLam h || isApp h || isCons h || isRL h) (pp ii vs h))
   , nest 1 (parensIf (isLam t || isRL t) (pp ii vs t))
   ]
-pp ii vs (RL a b c) = sep
-  [ text "RL"
-  , nest 1 (parensIf (isLam a || isApp a || isCons a || isRL a) (pp ii vs a))
-  , nest 1 (parensIf (isLam b || isApp b || isCons b || isRL b) (pp ii vs b))
-  , nest 1 (parensIf (isLam c) (pp ii vs c))
-  ]
+
+-- BORRAR?
+--pp ii vs (RL a b c) = sep
+--  [ text "RL"
+--  , nest 1 (parensIf (isLam a || isApp a || isCons a || isRL a) (pp ii vs a))
+--  , nest 1 (parensIf (isLam b || isApp b || isCons b || isRL b) (pp ii vs b))
+--  , nest 1 (parensIf (isLam c) (pp ii vs c))
+--  ]
 
 isLam :: Term -> Bool
 isLam (Lam _ _) = True
@@ -96,14 +100,16 @@ isCons :: Term -> Bool
 isCons (Cons _ _) = True
 isCons _          = False
 
+-- BORRAR?
 isRL :: Term -> Bool
-isRL (RL _ _ _) = True
-isRL _          = False
+isRL (RecL _ _ _) = True
+isRL _            = False
 
 -- pretty-printer de tipos
 printType :: Type -> Doc
 printType EmptyT = text "E"
 printType NatT   = text "Nat"
+printType ListT  = text "List Nat"
 printType (FunT t1 t2) =
   sep [parensIf (isFun t1) (printType t1), text "->", printType t2]
 
@@ -122,7 +128,7 @@ fv (Suc t)        = fv t
 fv (Rec t1 t2 t3) = fv t1 ++ fv t2 ++ fv t3
 fv Nil = []
 fv (Cons h t) = fv h ++ fv t
-fv (RecL a b c) = fv a ++ fv b ++ fv c
+-- fv (RecL a b c) = fv a ++ fv b ++ fv c   -- BORRAR?
 
 ---
 printTerm :: Term -> Doc

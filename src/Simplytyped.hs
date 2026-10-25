@@ -55,10 +55,12 @@ sub _ _ (Bound j) | otherwise = Bound j
 sub _ _ (Free n   )           = Free n
 sub i t (u   :@: v)           = sub i t u :@: sub i t v
 sub i t (Lam t'  u)           = Lam t' (sub (i + 1) t u)
+-- sub i t (Let u v) = -- COMPLETAR
 sub _ _ Zero           = Zero
 sub i t (Suc u)        = Suc (sub i t u)
 sub i t (Rec t1 t2 t3) = Rec (sub i t t1) (sub i t t2) (sub i t t3)
-
+sub _ _ Nil            = Nil
+sub i t (Cons u v)     = Cons (sub i t u) (sub i t v)
 
 -- convierte un valor en el término equivalente
 quote :: Value -> Term
@@ -99,6 +101,8 @@ eval nvs (Cons h t) = case eval nvs h of
                                   VList xs -> VList (VCons x xs)
                                   _ -> error "Lista mal definida."
                         _ -> error "Un elemento de la lista no es un natural."
+
+-- BORRAR?
 eval nvs (RecL t1 t2 l) = case eval nvs l of
                             VList xs -> case xs of
                                             VNil -> eval nvs t1
@@ -179,6 +183,8 @@ infer' c e (Cons x xs) = infer' c e x >>= \tx -> infer' c e xs >>= \txs ->
               ListT -> ret ListT
               _ -> matchError ListT txs
       _ -> matchError NatT tx
+
+-- BORRAR?
 infer' c e (RecL t1 t2 t3) = 
       infer' c e t1 >>= \tt1 -> 
       infer' c e t2 >>= \tt2 -> 

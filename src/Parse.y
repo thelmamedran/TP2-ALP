@@ -15,33 +15,34 @@ import Data.Char
 %lexer {lexer} {TEOF}
 
 %token
-    '='     { TEquals }
-    ':'     { TColon }
-    '\\'    { TAbs }
-    '.'     { TDot }
-    '('     { TOpen }
-    ')'     { TClose }
-    '->'    { TArrow }
-    'let'   { TLet }
-    'in'    { TIn }
-    '0'     { TZero }
-    'suc'   { TSuc }
-    'R'     { TRec }
-    'cons'  { TCons }
-    'nil'   { TNil }
-    'RL'    { TRL }
-    VAR     { TVar $$ }
-    TYPEE   { TTypeE }
-    TYPENAT { TTypeNat }
-    DEF     { TDef }
+    '='      { TEquals }
+    ':'      { TColon }
+    '\\'     { TAbs }
+    '.'      { TDot }
+    '('      { TOpen }
+    ')'      { TClose }
+    '->'     { TArrow }
+    'let'    { TLet }
+    'in'     { TIn }
+    '0'      { TZero }
+    'suc'    { TSuc }
+    'R'      { TRec }
+    'cons'   { TCons }
+    'nil'    { TNil }
+    'RL'     { TRecL }
+    VAR      { TVar $$ }
+    TYPEE    { TTypeE }
+    TYPENAT  { TTypeNat }
+    TYPELIST { TTypeList }
+    DEF      { TDef }
     
 
 %left '=' 
 %right '->'
-%right 'cons'
-%right 'RL'
-%right '\\' '.' 'let' 'in'
--- para suc y R no hay ningun problema de ambiguedad, no hace falta que esten aca
+-- %right 'cons'
+-- %right 'RL'
+%right '\\' '.' -- 'let' 'in'
+-- entiendo que si no hay problema de ambiguedad no es necesario que esten aca, me parece que no hay que agregar nada que no estaba ya originalmente pero hay que verlo bien
 
 %%
 
@@ -59,16 +60,16 @@ RecExp  :: { LamTerm }
         | RList                        { $1 }
 
 RList   :: { LamTerm }
-        : 'RL' List List List          { LRecL $2 $3 $4 }        -- PEND chequear si poner atom o list
-        | List    
+        : 'RL' Atom Atom Atom          { LRec $2 $3 $4 }
+        | List                         { $1 }
 
 List    :: { LamTerm }
-        : 'cons' Nat Nat               { LCons $2 $3 }                -- PEND chequear si poner atom
-        | SucExp   
+        : 'cons' Atom Atom             { LCons $2 $3 }
+        | SucExp                       { $1 }
 
 SucExp  :: { LamTerm }
         : 'suc' SucExp                 { LSuc $2 }
-        | NAbs
+        | NAbs                         { $1 }
 
 NAbs    :: { LamTerm }
         : NAbs Atom                    { LApp $1 $2 }
@@ -82,6 +83,7 @@ Atom    :: { LamTerm }
 
 Type    : TYPEE                        { EmptyT }
         | TYPENAT                      { NatT }
+        | TYPELIST TYPENAT             { ListT }
         | Type '->' Type               { FunT $1 $3 }
         | '(' Type ')'                 { $2 }
 
@@ -120,6 +122,7 @@ happyError = \ s i -> Failed $ "Línea "++(show (i::LineNumber))++": Error de pa
 data Token = TVar String
                | TTypeE
                | TTypeNat
+               | TTypeList
                | TDef
                | TAbs
                | TDot
@@ -133,10 +136,10 @@ data Token = TVar String
                | TIn
                | TZero
                | TSuc
--              | TRec
+               | TRec
                | TCons
                | TNil
-               | TRL
+               | TRecL
                deriving Show
 
 ----------------------------------
@@ -162,6 +165,7 @@ lexer cont s = case s of
                     where lexVar cs = case span isAlpha cs of
                               ("E",rest)    -> cont TTypeE rest
                               ("Nat",rest)  -> cont TTypeNat rest
+                              ("List",rest) -> cont TTypeList rest
                               ("def",rest)  -> cont TDef rest
                               ("let",rest)  -> cont TLet rest
                               ("in",rest)   -> cont TIn rest
