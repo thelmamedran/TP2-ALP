@@ -60,7 +60,7 @@ RecExp  :: { LamTerm }
         | RList                        { $1 }
 
 RList   :: { LamTerm }
-        : 'RL' Atom Atom Atom          { LRec $2 $3 $4 }
+        : 'RL' Atom Atom Atom          { LRecL $2 $3 $4 }
         | List                         { $1 }
 
 List    :: { LamTerm }

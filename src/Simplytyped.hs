@@ -43,6 +43,7 @@ conversion_aux l (LRec t1 t2 t3) = Rec (conversion_aux l t1) (conversion_aux l t
 
 conversion_aux l LNil = Nil
 conversion_aux l (LCons t1 t2) = Cons (conversion_aux l t1) (conversion_aux l t2)
+conversion_aux l (LRecL t1 t2 t3) = RL (conversion_aux l t1) (conversion_aux l t2) (conversion_aux l t3)
 
 ----------------------------
 --- evaluador de términos
@@ -55,12 +56,13 @@ sub _ _ (Bound j) | otherwise = Bound j
 sub _ _ (Free n   )           = Free n
 sub i t (u   :@: v)           = sub i t u :@: sub i t v
 sub i t (Lam t'  u)           = Lam t' (sub (i + 1) t u)
--- sub i t (Let u v) = -- COMPLETAR
+sub i t (Let u v) = Let (sub i t u) (sub (i + 1) t v)
 sub _ _ Zero           = Zero
 sub i t (Suc u)        = Suc (sub i t u)
 sub i t (Rec t1 t2 t3) = Rec (sub i t t1) (sub i t t2) (sub i t t3)
 sub _ _ Nil            = Nil
 sub i t (Cons u v)     = Cons (sub i t u) (sub i t v)
+sub i t (RL t1 t2 t3) = RL (sub i t t1) (sub i t t2) (sub i t t3)
 
 -- convierte un valor en el término equivalente
 quote :: Value -> Term
@@ -103,10 +105,10 @@ eval nvs (Cons h t) = case eval nvs h of
                         _ -> error "Un elemento de la lista no es un natural."
 
 -- BORRAR?
-eval nvs (RecL t1 t2 l) = case eval nvs l of
+eval nvs (RL t1 t2 l) = case eval nvs l of
                             VList xs -> case xs of
                                             VNil -> eval nvs t1
-                                            VCons x xs -> eval nvs ((t2 :@: (quote (VNum x))) :@: (RecL t1 t2 (quote (VList xs))))
+                                            VCons x xs -> eval nvs ((t2 :@: (quote (VNum x))) :@: (RL t1 t2 (quote (VList xs))))
                             _ -> error "Se intentó aplicar RL en un término que no es una lista."
                             
 
@@ -185,7 +187,7 @@ infer' c e (Cons x xs) = infer' c e x >>= \tx -> infer' c e xs >>= \txs ->
       _ -> matchError NatT tx
 
 -- BORRAR?
-infer' c e (RecL t1 t2 t3) = 
+infer' c e (RL t1 t2 t3) = 
       infer' c e t1 >>= \tt1 -> 
       infer' c e t2 >>= \tt2 -> 
       infer' c e t3 >>= \tt3 ->

@@ -1,0 +1,15 @@
+def ifthenelse = \cond:Nat. \t:Nat. \f:Nat. R f (\m:Nat. \n:Nat. t) cond
+
+def iflist = \cond:Nat. \t:List Nat. \f:List Nat. R f (\m:List Nat. \n:Nat. t) cond
+
+def pred = \n:Nat . R 0 (\m:Nat. \k:Nat. k) n
+
+def resta = \n:Nat. \m:Nat. R n (\r:Nat. \k:Nat. pred r) m
+
+def not = \b:Nat. ifthenelse b 0 (suc 0)
+
+def eq = \n:Nat. \m:Nat. ifthenelse (resta n m) 0 (not (resta m n))
+
+def elim = \n:Nat. \l:List Nat. RL nil (\m:Nat. \r:List Nat. iflist (eq n m) r (cons m r)) l
+
+def elimDups = \l:List Nat. RL nil (\n:Nat. \xs:List Nat. cons n (elim n xs)) l

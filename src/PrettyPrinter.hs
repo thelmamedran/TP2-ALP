@@ -102,7 +102,7 @@ isCons _          = False
 
 -- BORRAR?
 isRL :: Term -> Bool
-isRL (RecL _ _ _) = True
+isRL (RL _ _ _) = True
 isRL _            = False
 
 -- pretty-printer de tipos
@@ -128,7 +128,7 @@ fv (Suc t)        = fv t
 fv (Rec t1 t2 t3) = fv t1 ++ fv t2 ++ fv t3
 fv Nil = []
 fv (Cons h t) = fv h ++ fv t
--- fv (RecL a b c) = fv a ++ fv b ++ fv c   -- BORRAR?
+fv (RL a b c) = fv a ++ fv b ++ fv c   -- BORRAR?
 
 ---
 printTerm :: Term -> Doc
