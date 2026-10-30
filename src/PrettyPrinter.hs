@@ -27,8 +27,8 @@ pp ii vs (Bound k         ) = text (vs !! (ii - k - 1))
 pp _  _  (Free  (Global s)) = text s
 
 pp ii vs (i :@: c         ) = sep
-  [ parensIf (isLam i || isLet c || isCons c || isRL c) (pp ii vs i)
-  , nest 1 (parensIf (isLam c || isApp c || isLet c || isCons c || isRL c) (pp ii vs c))
+  [ parensIf (not (isAtom i || isApp i)) (pp ii vs i)
+  , nest 1 (parensIf (not (isAtom c)) (pp ii vs c))
   ]
 pp ii vs (Lam t c) =
   text "\\"
@@ -50,31 +50,30 @@ pp _ _ Zero      = text "0"
 
 pp ii vs (Suc t) = 
   text "suc " 
-    <> parensIf (isLam t || isApp t || isR t || isCons t || isLet t) (pp ii vs t)
+    <> parensIf (isLam t || isLet t || isR t || isRL t || isCons t) (pp ii vs t)
 
 -- VER: definir isAtom y hacer parensIf (not (isAtom t1))?
 pp ii vs (Rec t1 t2 t3) = sep 
   [ text "R"
-  , nest 1 (parensIf (isLam t1 || isApp t1 || isSuc t1 || isR t1) (pp ii vs t1))
-  , nest 1 (parensIf (isLam t2 || isApp t2 || isSuc t2 || isR t2) (pp ii vs t2))
-  , nest 1 (parensIf (isLam t3 || isApp t3 || isSuc t3 || isR t3) (pp ii vs t3))
+  , nest 1 (parensIf (not (isAtom t1)) (pp ii vs t1))
+  , nest 1 (parensIf (not (isAtom t2)) (pp ii vs t2))
+  , nest 1 (parensIf (isLam t3 || isLet t3) (pp ii vs t3))
   ]
 
 -- VER: si usamos isAtom en el anterior aca supongo que tambien
 pp _ _ (Nil) = text "nil"
 pp ii vs (Cons h t) = sep
   [ text "cons"
-  , nest 1 (parensIf (isLam h || isApp h || isCons h || isRL h) (pp ii vs h))
-  , nest 1 (parensIf (isLam t || isRL t) (pp ii vs t))
+  , nest 1 (parensIf (not (isAtom h)) (pp ii vs h))
+  , nest 1 (parensIf (isLam t || isLet t || isR t || isRL t) (pp ii vs t))
   ]
 
--- BORRAR?
---pp ii vs (RL a b c) = sep
---  [ text "RL"
---  , nest 1 (parensIf (isLam a || isApp a || isCons a || isRL a) (pp ii vs a))
---  , nest 1 (parensIf (isLam b || isApp b || isCons b || isRL b) (pp ii vs b))
---  , nest 1 (parensIf (isLam c) (pp ii vs c))
---  ]
+pp ii vs (RL t1 t2 t3) = sep
+  [ text "RL"
+  , nest 1 (parensIf (not (isAtom t1)) (pp ii vs t1))
+  , nest 1 (parensIf (not (isAtom t2)) (pp ii vs t2))
+  , nest 1 (parensIf (isLam t3 || isLet t3 || isR t3) (pp ii vs t3))
+  ]
 
 isLam :: Term -> Bool
 isLam (Lam _ _) = True
@@ -104,6 +103,13 @@ isCons _          = False
 isRL :: Term -> Bool
 isRL (RL _ _ _) = True
 isRL _            = False
+
+isAtom :: Term -> Bool
+isAtom (Bound _) = True
+isAtom (Free _)  = True
+isAtom Zero      = True
+isAtom Nil       = True
+isAtom _         = False
 
 -- pretty-printer de tipos
 printType :: Type -> Doc

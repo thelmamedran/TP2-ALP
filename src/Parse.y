@@ -56,15 +56,15 @@ Exp     :: { LamTerm }
         | RecExp                       { $1 }
 
 RecExp  :: { LamTerm }
-        : 'R' Atom Atom Atom           { LRec $2 $3 $4 }
+        : 'R' Atom Atom RecExp         { LRec $2 $3 $4 }
         | RList                        { $1 }
 
 RList   :: { LamTerm }
-        : 'RL' Atom Atom Atom          { LRecL $2 $3 $4 }
+        : 'RL' Atom Atom RList         { LRecL $2 $3 $4 }
         | List                         { $1 }
 
 List    :: { LamTerm }
-        : 'cons' Atom Atom             { LCons $2 $3 }
+        : 'cons' Atom List             { LCons $2 $3 }
         | SucExp                       { $1 }
 
 SucExp  :: { LamTerm }
