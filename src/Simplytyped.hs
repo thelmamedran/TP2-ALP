@@ -34,13 +34,10 @@ conversion_aux l (LVar x) = let (bool, i) = indice l x
                               in if bool then (Bound i) else (Free (Global x))
 conversion_aux l (LAbs x t term) = (Lam t (conversion_aux (x:l) term))
 conversion_aux l (LApp t1 t2) = ((conversion_aux l t1) :@: (conversion_aux l t2))
--- a chequear::::::::
 conversion_aux l (LLet x t1 t2) = Let (conversion_aux l t1) (conversion_aux (x:l) t2)
-
 conversion_aux l LZero           = Zero
 conversion_aux l (LSuc t)        = Suc (conversion_aux l t)
 conversion_aux l (LRec t1 t2 t3) = Rec (conversion_aux l t1) (conversion_aux l t2) (conversion_aux l t3)
-
 conversion_aux l LNil = Nil
 conversion_aux l (LCons t1 t2) = Cons (conversion_aux l t1) (conversion_aux l t2)
 conversion_aux l (LRecL t1 t2 t3) = RL (conversion_aux l t1) (conversion_aux l t2) (conversion_aux l t3)
@@ -62,7 +59,7 @@ sub i t (Suc u)        = Suc (sub i t u)
 sub i t (Rec t1 t2 t3) = Rec (sub i t t1) (sub i t t2) (sub i t t3)
 sub _ _ Nil            = Nil
 sub i t (Cons u v)     = Cons (sub i t u) (sub i t v)
-sub i t (RL t1 t2 t3) = RL (sub i t t1) (sub i t t2) (sub i t t3)
+sub i t (RL t1 t2 t3)  = RL (sub i t t1) (sub i t t2) (sub i t t3)
 
 -- convierte un valor en el término equivalente
 quote :: Value -> Term
@@ -104,14 +101,12 @@ eval nvs (Cons h t) = case eval nvs h of
                                   _ -> error "Lista mal definida."
                         _ -> error "Un elemento de la lista no es un natural."
 
--- BORRAR?
 eval nvs (RL t1 t2 l) = case eval nvs l of
                             VList xs -> case xs of
                                             VNil -> eval nvs t1
                                             VCons x xs -> eval nvs ((t2 :@: (quote (VNum x))) :@: (RL t1 t2 (quote (VList xs))))
                             _ -> error "Se intentó aplicar RL en un término que no es una lista."
                             
-
 ----------------------
 --- type checker
 -----------------------
@@ -186,7 +181,6 @@ infer' c e (Cons x xs) = infer' c e x >>= \tx -> infer' c e xs >>= \txs ->
               _ -> matchError ListT txs
       _ -> matchError NatT tx
 
--- BORRAR?
 infer' c e (RL t1 t2 t3) = 
       infer' c e t1 >>= \tt1 -> 
       infer' c e t2 >>= \tt2 -> 

@@ -52,7 +52,6 @@ pp ii vs (Suc t) =
   text "suc " 
     <> parensIf (isLam t || isLet t || isR t || isRL t || isCons t) (pp ii vs t)
 
--- VER: definir isAtom y hacer parensIf (not (isAtom t1))?
 pp ii vs (Rec t1 t2 t3) = sep 
   [ text "R"
   , nest 1 (parensIf (not (isAtom t1)) (pp ii vs t1))
@@ -60,7 +59,6 @@ pp ii vs (Rec t1 t2 t3) = sep
   , nest 1 (parensIf (isLam t3 || isLet t3) (pp ii vs t3))
   ]
 
--- VER: si usamos isAtom en el anterior aca supongo que tambien
 pp _ _ (Nil) = text "nil"
 pp ii vs (Cons h t) = sep
   [ text "cons"
@@ -99,7 +97,6 @@ isCons :: Term -> Bool
 isCons (Cons _ _) = True
 isCons _          = False
 
--- BORRAR?
 isRL :: Term -> Bool
 isRL (RL _ _ _) = True
 isRL _            = False
@@ -134,9 +131,8 @@ fv (Suc t)        = fv t
 fv (Rec t1 t2 t3) = fv t1 ++ fv t2 ++ fv t3
 fv Nil = []
 fv (Cons h t) = fv h ++ fv t
-fv (RL a b c) = fv a ++ fv b ++ fv c   -- BORRAR?
+fv (RL a b c) = fv a ++ fv b ++ fv c
 
 ---
 printTerm :: Term -> Doc
 printTerm t = pp 0 (filter (\v -> not $ elem v (fv t)) vars) t
-

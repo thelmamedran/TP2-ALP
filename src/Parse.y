@@ -39,10 +39,7 @@ import Data.Char
 
 %left '=' 
 %right '->'
--- %right 'cons'
--- %right 'RL'
-%right '\\' '.' -- 'let' 'in'
--- entiendo que si no hay problema de ambiguedad no es necesario que esten aca, me parece que no hay que agregar nada que no estaba ya originalmente pero hay que verlo bien
+%right '\\' '.'
 
 %%
 
